@@ -16,19 +16,27 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content">
 
-    <EditText
-        android:id="@+id/dialog_stock"
+    <TextView
+        android:id="@+id/tv_widget_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="4dp"
-        android:layout_marginTop="16dp"
-        android:hint="@string/dialog_hint"
-        android:inputType="textCapCharacters" />
+
+        android:background="@color/colorPrimary"
+        android:padding="4dp"
+
+        android:contentDescription="@string/description_widget_title"
+        android:text="@string/widget_title"
+        style="@style/WidgetTitleTextStyle" />
+
+    <ListView
+        android:id="@+id/lv_widget_stock"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:background="@color/colorPrimaryDark"
+        android:padding="3dp"/>
 
 </LinearLayout>

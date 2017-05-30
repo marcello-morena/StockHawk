@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 NinetySlide
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.udacity.stockhawk.sync;
 
 import android.app.job.JobInfo;
@@ -8,15 +24,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
 
+import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
+import com.udacity.stockhawk.mock.MockUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,13 +45,13 @@ import timber.log.Timber;
 import yahoofinance.Stock;
 import yahoofinance.YahooFinance;
 import yahoofinance.histquotes.HistoricalQuote;
-import yahoofinance.histquotes.Interval;
 import yahoofinance.quotes.stock.StockQuote;
 
 public final class QuoteSyncJob {
 
+    public static final String ACTION_DATA_UPDATED = "com.udacity.stockhawk.ACTION_DATA_UPDATED";
+
     private static final int ONE_OFF_ID = 2;
-    private static final String ACTION_DATA_UPDATED = "com.udacity.stockhawk.ACTION_DATA_UPDATED";
     private static final int PERIOD = 300000;
     private static final int INITIAL_BACKOFF = 10000;
     private static final int PERIODIC_ID = 1;
@@ -40,7 +60,7 @@ public final class QuoteSyncJob {
     private QuoteSyncJob() {
     }
 
-    static void getQuotes(Context context) {
+    static void getQuotes(final Context context) {
 
         Timber.d("Running sync job");
 
@@ -62,46 +82,63 @@ public final class QuoteSyncJob {
             }
 
             Map<String, Stock> quotes = YahooFinance.get(stockArray);
-            Iterator<String> iterator = stockCopy.iterator();
 
             Timber.d(quotes.toString());
 
             ArrayList<ContentValues> quoteCVs = new ArrayList<>();
 
-            while (iterator.hasNext()) {
-                String symbol = iterator.next();
-
+            for (final String symbol : stockCopy) {
 
                 Stock stock = quotes.get(symbol);
-                StockQuote quote = stock.getQuote();
 
-                float price = quote.getPrice().floatValue();
-                float change = quote.getChange().floatValue();
-                float percentChange = quote.getChangeInPercent().floatValue();
+                if (stock != null && stock.isValid()) {
+                    StockQuote quote = stock.getQuote();
 
-                // WARNING! Don't request historical data for a stock that doesn't exist!
-                // The request will hang forever X_x
-                List<HistoricalQuote> history = stock.getHistory(from, to, Interval.WEEKLY);
+                    float price = quote.getPrice().floatValue();
+                    float change = quote.getChange().floatValue();
+                    float percentChange = quote.getChangeInPercent().floatValue();
 
-                StringBuilder historyBuilder = new StringBuilder();
+                    // WARNING! Don't request historical data for a stock that doesn't exist!
+                    // The request will hang forever X_x
+                    //List<HistoricalQuote> history = stock.getHistory(from, to, Interval.WEEKLY);
 
-                for (HistoricalQuote it : history) {
-                    historyBuilder.append(it.getDate().getTimeInMillis());
-                    historyBuilder.append(", ");
-                    historyBuilder.append(it.getClose());
-                    historyBuilder.append("\n");
+                    //​ ​Note​ ​for​ ​reviewer:
+                    //​ ​Due​ ​to​ ​the​ ​problems​ ​with​ ​Yahoo​ ​API​ ​we​ ​have​ ​commented​ ​the​ ​line​ ​above
+                    //​ ​and​ ​included​ ​this​ ​one​ ​to​ ​fetch​ ​the​ ​history​ ​from​ ​MockUtils
+                    //​ ​This​ ​should​ ​be​ ​enough​ ​as​ ​to​ ​develop​ ​and​ ​review​ ​while​ ​the​ ​API​ ​is​ ​down
+                    List<HistoricalQuote> history = MockUtils.getHistory();
+
+                    StringBuilder historyBuilder = new StringBuilder();
+
+                    for (HistoricalQuote it : history) {
+                        historyBuilder.append(it.getDate().getTimeInMillis());
+                        historyBuilder.append(", ");
+                        historyBuilder.append(it.getClose());
+                        historyBuilder.append("\n");
+                    }
+
+                    ContentValues quoteCV = new ContentValues();
+                    quoteCV.put(Contract.Quote.COLUMN_SYMBOL, symbol);
+                    quoteCV.put(Contract.Quote.COLUMN_PRICE, price);
+                    quoteCV.put(Contract.Quote.COLUMN_PERCENTAGE_CHANGE, percentChange);
+                    quoteCV.put(Contract.Quote.COLUMN_ABSOLUTE_CHANGE, change);
+
+
+                    quoteCV.put(Contract.Quote.COLUMN_HISTORY, historyBuilder.toString());
+
+                    quoteCVs.add(quoteCV);
+                } else {
+                    // In case the added symbol does not exist
+                    PrefUtils.removeStock(context, symbol);
+                    new Handler(Looper.getMainLooper()).post(
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(context, context.getString(R.string.error_invalid_stock) + " " + symbol, Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                    );
                 }
-
-                ContentValues quoteCV = new ContentValues();
-                quoteCV.put(Contract.Quote.COLUMN_SYMBOL, symbol);
-                quoteCV.put(Contract.Quote.COLUMN_PRICE, price);
-                quoteCV.put(Contract.Quote.COLUMN_PERCENTAGE_CHANGE, percentChange);
-                quoteCV.put(Contract.Quote.COLUMN_ABSOLUTE_CHANGE, change);
-
-
-                quoteCV.put(Contract.Quote.COLUMN_HISTORY, historyBuilder.toString());
-
-                quoteCVs.add(quoteCV);
 
             }
 

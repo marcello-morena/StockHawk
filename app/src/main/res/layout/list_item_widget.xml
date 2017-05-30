@@ -17,20 +17,19 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="?android:attr/listPreferredItemHeight"
-    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_vertical"
+    android:id="@+id/ll_widget_row">
 
     <TextView
-        android:id="@+id/symbol"
+        android:id="@+id/tv_widget_symbol"
         style="@style/StockSymbolTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="start|center_vertical"
-        tools:text="GOOG" />
+        tools:text="GOOG"/>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -39,21 +38,22 @@
         android:gravity="end">
 
         <TextView
-            android:id="@+id/price"
+            android:id="@+id/tv_widget_value"
             style="@style/BidPriceTextStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="10sp"
-            tools:text="1000.00" />
+            tools:text="1000.00"/>
 
         <TextView
-            android:id="@+id/change"
+            android:id="@+id/tv_widget_diff"
             style="@style/PercentChangeTextStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/percent_change_pill_green"
             android:paddingStart="3dp"
             android:paddingEnd="3dp"
-            tools:text="100%" />
+            tools:text="100%"/>
     </LinearLayout>
+
 </LinearLayout>
